@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Song Requests - [Your Performer Name]</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: linear-gradient(to bottom, #1a1a2e, #16213e); color: #fff; }
+        header { text-align: center; padding: 20px; background: rgba(0,0,0,0.7); }
+        h1 { margin: 0; }
+        .container { max-width: 800px; margin: 20px auto; padding: 20px; }
+        input, select, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 8px; border: none; }
+        input, select { background: #fff; color: #000; }
+        button { background: #ffcc00; color: #000; font-weight: bold; cursor: pointer; }
+        button:hover { background: #ffd633; }
+        .song-list { list-style: none; padding: 0; }
+        .song-item { background: rgba(255,255,255,0.1); margin: 10px 0; padding: 15px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .request-form { background: rgba(255,255,255,0.1); padding: 20px; border-radius: 12px; margin-top: 30px; }
+        .success { color: #4caf50; text-align: center; display: none; }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>🎤 Request a Song - [Your Performer Name] on Costa del Sol</h1>
+        <p>Choose a song and pay what you want! Tips are greatly appreciated ❤️</p>
+    </header>
+
+    <div class="container">
+        <input type="text" id="search" placeholder="Search songs or artists..." onkeyup="filterSongs()">
+
+        <ul class="song-list" id="songList"></ul>
+
+        <div class="request-form">
+            <h2>Make a Request</h2>
+            <select id="selectedSong" onchange="updateAmountSuggestion()">
+                <!-- Populated by JS -->
+            </select>
+            <input type="number" id="amount" placeholder="Amount in € (pay what you want!)" min="1" step="0.01" value="5">
+            <input type="text" id="requester" placeholder="Your name (optional)">
+            <input type="text" id="message" placeholder="Dedication / message (optional)">
+            <button onclick="submitRequest()">Request & Pay</button>
+        </div>
+
+        <div class="success" id="successMsg">
+            <h2>Thank you! 🎉 Your request has been sent.</h2>
+            <p>I'll try to play it soon. Enjoy the show!</p>
+        </div>
+
+        <!-- Import Section (for you, the performer) -->
+        <div class="request-form" style="margin-top: 40px; background: rgba(255,255,255,0.15);">
+            <h2>🔧 Import My Full Song List (Performer Only)</h2>
+            <p>Paste your songs below (one per line, e.g. "Song Title - Artist")</p>
+            <textarea id="importText" rows="8" placeholder="Despacito - Luis Fonsi&#10;Bailando - Enrique Iglesias&#10;..."></textarea>
+            <button onclick="importSongs()">Import Songs</button>
+            <button onclick="exportSongs()" style="background: #4caf50; margin-top: 5px;">Export Current List as JSON</button>
+        </div>
+    </div>
+
+    <script>
+        // === YOUR SONG CATALOGUE (edit this!) ===
+        const songs = [
+            { title: "Despacito", artist: "Luis Fonsi" },
+            { title: "Bailando", artist: "Enrique Iglesias" },
+            { title: "La Macarena", artist: "Los Del Rio" },
+            { title: "Shape of You", artist: "Ed Sheeran" },
+            { title: "Perfect", artist: "Ed Sheeran" },
+            { title: "Feliz Navidad", artist: "José Feliciano" },
+            { title: "Volví", artist: "Aventura & Bad Bunny" },
+            // Add as many as you want!
+        ];
+
+        // Populate song list and dropdown
+        function populateSongs() {
+            const list = document.getElementById('songList');
+            const select = document.getElementById('selectedSong');
+            list.innerHTML = '';
+            select.innerHTML = '<option value="">Select a song...</option>';
+
+            songs.forEach(song => {
+                const li = document.createElement('li');
+                li.className = 'song-item';
+                li.innerHTML = `
+                    <span><strong>${song.title}</strong> - ${song.artist}</span>
+                    <button onclick="selectSong('${song.title} - ${song.artist}')">Request</button>
+                `;
+                list.appendChild(li);
+
+                const option = document.createElement('option');
+                option.value = `${song.title} - ${song.artist}`;
+                option.textContent = `${song.title} - ${song.artist}`;
+                select.appendChild(option);
+            });
+        }
+
+        function filterSongs() {
+            const term = document.getElementById('search').value.toLowerCase();
+            const items = document.querySelectorAll('.song-item');
+            items.forEach(item => {
+                item.style.display = item.textContent.toLowerCase().includes(term) ? '' : 'none';
+            });
+        }
+
+        function selectSong(songName) {
+            document.getElementById('selectedSong').value = songName;
+            window.scrollTo({ top: document.querySelector('.request-form').offsetTop, behavior: 'smooth' });
+        }
+
+        function updateAmountSuggestion() {
+            // Optional: suggest higher amount for popular songs
+        }
+
+        // === BULK IMPORT FUNCTION ===
+        function importSongs() {
+            const text = document.getElementById('importText').value.trim();
+            if (!text) {
+                alert("Paste your song list first!");
+                return;
+            }
+
+            const lines = text.split('\n');
+            const newSongs = [];
+
+            lines.forEach(line => {
+                line = line.trim();
+                if (!line) return;
+
+                let title, artist;
+                if (line.includes(' - ')) {
+                    [title, artist] = line.split(' - ', 2);
+                } else if (line.includes(',')) {
+                    [title, artist] = line.split(',', 2);
+                } else {
+                    title = line;
+                    artist = 'Unknown';
+                }
+
+                newSongs.push({
+                    title: title.trim(),
+                    artist: (artist || 'Unknown').trim()
+                });
+            });
+
+            if (newSongs.length > 0) {
+                songs.length = 0; // Clear old list
+                songs.push(...newSongs);
+                populateSongs();
+                alert(`✅ Successfully imported ${newSongs.length} songs!`);
+                document.getElementById('importText').value = '';
+            }
+        }
+
+        function exportSongs() {
+            const dataStr = JSON.stringify(songs, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = 'songs.json';
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        function submitRequest() {
+            const song = document.getElementById('selectedSong').value;
+            const amount = document.getElementById('amount').value;
+            const name = document.getElementById('requester').value || 'Anonymous';
+            const msg = document.getElementById('message').value;
+
+            if (!song) {
+                alert("Please select a song!");
+                return;
+            }
+
+            // === PAYMENT: Replace with your real PayPal/Stripe link ===
+            // Example PayPal "Pay What You Want" link (create one in PayPal)
+            const paypalUrl = `https://www.paypal.com/paypalme/yourpaypalusername/${amount}?locale.x=es_ES`; 
+            // Or use Stripe Checkout link with dynamic amount if you set it up.
+
+            const confirmation = `Request: ${song}\nFrom: ${name}\nAmount: €${amount}\nMessage: ${msg || 'None'}`;
+            if (confirm(confirmation + "\n\nProceed to payment?")) {
+                window.open(paypalUrl, '_blank');
+                
+                // Show success
+                document.getElementById('successMsg').style.display = 'block';
+                setTimeout(() => {
+                    document.getElementById('successMsg').style.display = 'none';
+                }, 8000);
+            }
+        }
+
+        // Initialize
+        window.onload = populateSongs;
+    </script>
+</body>
+</html>
